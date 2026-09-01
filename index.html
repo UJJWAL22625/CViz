@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#fefcf5" />
+  <title>C Program Structural Visualizer | Academic Project</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-logo" aria-label="CViz logo">
+      <span class="logo-bracket">⟨</span>
+      <span class="logo-text">C<span class="logo-accent">Viz</span></span>
+      <span class="logo-bracket">⟩</span>
+    </div>
+    <div class="header-title">
+      <h1>Web-Based Visualizer for Structural Representation of C Programs</h1>
+      <p class="header-sub">Lexical Analysis · Abstract Syntax Tree · Control Flow · Data Flow · Code Property Graph</p>
+    </div>
+    <div class="header-badge" aria-label="Academic Project">🎓 CS Project</div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════
+     INPUT PANEL
+═══════════════════════════════════════════════ -->
+<section class="input-panel" aria-label="Code input and analysis controls">
+  <div class="panel-inner">
+
+    <div class="input-left">
+      <div class="section-label">
+        <span class="label-num" aria-hidden="true">01</span>
+        <span>📝 Code Input</span>
+      </div>
+
+      <div class="sample-row">
+        <label for="sampleSelect" class="form-label">📁 Sample:</label>
+        <select id="sampleSelect" class="form-select" onchange="loadSample()" aria-label="Load a sample C program">
+          <option value="">— Choose a sample program —</option>
+          <option value="prog1">✨ Program 1 · Simple Arithmetic</option>
+          <option value="prog2">⚡ Program 2 · Conditional (if/else)</option>
+          <option value="prog3">🔄 Program 3 · For Loop</option>
+          <option value="prog4">🎯 Program 4 · Nested Logic</option>
+        </select>
+      </div>
+
+      <div class="editor-wrap">
+        <div class="editor-topbar" role="toolbar" aria-label="Editor toolbar">
+          <span class="editor-dot r" aria-hidden="true"></span>
+          <span class="editor-dot y" aria-hidden="true"></span>
+          <span class="editor-dot g" aria-hidden="true"></span>
+          <span class="editor-filename" aria-hidden="true">📄 program.c</span>
+          <button class="btn-clear" onclick="clearCode()" aria-label="Clear editor">🗑️ Clear</button>
+        </div>
+        <textarea
+          id="codeInput"
+          class="code-editor"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          aria-label="C source code input"
+          placeholder="// Paste your C program here
+// or choose a sample above
+
+int main() {
+    // your code...
+    return 0;
+}"></textarea>
+      </div>
+    </div>
+
+    <div class="input-right">
+      <div class="section-label">
+        <span class="label-num" aria-hidden="true">02</span>
+        <span>⚙️ Analysis Controls</span>
+      </div>
+
+      <div class="controls-card">
+        <p class="controls-hint">🎯 Select analyses to run:</p>
+
+        <div class="checkbox-list" role="group" aria-label="Analysis options">
+          <label class="check-item">
+            <input type="checkbox" id="chkLex" checked aria-label="Lexical Analysis" />
+            <span>📋 Lexical (Tokens)</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="chkAST" checked aria-label="Abstract Syntax Tree" />
+            <span>🌿 Syntax Tree (AST)</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="chkCFG" checked aria-label="Control Flow Graph" />
+            <span>📊 Control Flow (CFG)</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="chkDFG" checked aria-label="Data Flow Graph" />
+            <span>↗️ Data Flow (DFG)</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="chkCPG" checked aria-label="Code Property Graph" />
+            <span>◎ Property Graph (CPG)</span>
+          </label>
+        </div>
+
+        <button class="btn-analyze" onclick="analyzeCode()" aria-live="polite">
+          <span class="btn-icon" aria-hidden="true">🚀</span>
+          <span>Analyze Program</span>
+        </button>
+
+        <div id="statusMsg" class="status-msg hidden" role="status" aria-live="polite"></div>
+
+        <details class="info-card" open>
+          <summary class="info-title">📖 Supported Constructs</summary>
+          <ul class="info-list">
+            <li>Variable declarations &amp; assignments</li>
+            <li>Arithmetic &amp; relational expressions</li>
+            <li>if / else conditionals</li>
+            <li>for / while loops</li>
+            <li>Function calls (printf, etc.)</li>
+            <li>return statements</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     RESULTS
+═══════════════════════════════════════════════ -->
+<main class="results-area" id="resultsArea" aria-label="Analysis results">
+
+  <div class="tab-bar" role="tablist" aria-label="Analysis result tabs">
+    <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-tokens" data-tab="tokens" onclick="switchTab('tokens', this)">
+      <span class="tab-icon" aria-hidden="true">📋</span><span class="tab-label">Tokens</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-ast" data-tab="ast" onclick="switchTab('ast', this)">
+      <span class="tab-icon" aria-hidden="true">🌿</span><span class="tab-label">AST</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-cfg" data-tab="cfg" onclick="switchTab('cfg', this)">
+      <span class="tab-icon" aria-hidden="true">📊</span><span class="tab-label">CFG</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-dfg" data-tab="dfg" onclick="switchTab('dfg', this)">
+      <span class="tab-icon" aria-hidden="true">↗️</span><span class="tab-label">DFG</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-cpg" data-tab="cpg" onclick="switchTab('cpg', this)">
+      <span class="tab-icon" aria-hidden="true">◎</span><span class="tab-label">CPG</span>
+    </button>
+  </div>
+
+  <!-- TOKENS -->
+  <div class="tab-panel active" id="tab-tokens" role="tabpanel">
+    <div class="panel-header">
+      <div class="panel-header-text">
+        <h2 class="panel-title">📋 Lexical Analysis — Token Stream</h2>
+        <p class="panel-desc">The lexer scans source code character-by-character and groups characters into tokens using DFA-based pattern matching.</p>
+      </div>
+      <div id="tokenStats" class="stat-chips" aria-label="Token statistics"></div>
+    </div>
+    <div id="tokenOutput" class="token-output">
+      <div class="placeholder-msg">✨ Run the analyzer to see the token stream →</div>
+    </div>
+  </div>
+
+  <!-- AST -->
+  <div class="tab-panel" id="tab-ast" role="tabpanel" aria-hidden="true">
+    <div class="panel-header">
+      <div class="panel-header-text">
+        <h2 class="panel-title">🌿 Abstract Syntax Tree</h2>
+        <p class="panel-desc">The AST represents the hierarchical syntactic structure of the program, abstracting away punctuation into a tree of semantic nodes.</p>
+      </div>
+    </div>
+    <div id="astOutput" class="ast-output">
+      <div class="placeholder-msg">✨ Run the analyzer to see the AST →</div>
+    </div>
+  </div>
+
+  <!-- CFG -->
+  <div class="tab-panel" id="tab-cfg" role="tabpanel" aria-hidden="true">
+    <div class="panel-header">
+      <div class="panel-header-text">
+        <h2 class="panel-title">📊 Control Flow Graph</h2>
+        <p class="panel-desc">The CFG models all possible execution paths. Each node is a basic block; edges represent transfers of control.</p>
+      </div>
+    </div>
+    <p class="graph-scroll-hint" aria-hidden="true">← Scroll to explore →</p>
+    <div id="cfgOutput" class="cfg-output graph-container">
+      <div class="placeholder-msg">✨ Run the analyzer to see the CFG →</div>
+    </div>
+  </div>
+
+  <!-- DFG -->
+  <div class="tab-panel" id="tab-dfg" role="tabpanel" aria-hidden="true">
+    <div class="panel-header">
+      <div class="panel-header-text">
+        <h2 class="panel-title">↗️ Data Flow Graph</h2>
+        <p class="panel-desc">The DFG tracks how data values are defined and used across statements, revealing variable dependencies and potential hazards.</p>
+      </div>
+    </div>
+    <p class="graph-scroll-hint" aria-hidden="true">← Scroll to explore →</p>
+    <div id="dfgOutput" class="dfg-output graph-container">
+      <div class="placeholder-msg">✨ Run the analyzer to see the DFG →</div>
+    </div>
+  </div>
+
+  <!-- CPG -->
+  <div class="tab-panel" id="tab-cpg" role="tabpanel" aria-hidden="true">
+    <div class="panel-header">
+      <div class="panel-header-text">
+        <h2 class="panel-title">◎ Code Property Graph (CPG)</h2>
+        <p class="panel-desc">The CPG merges AST, control-flow, and data-flow edges into one unified graph — the representation used by modern AI code assistants.</p>
+      </div>
+    </div>
+    <p class="graph-scroll-hint" aria-hidden="true">← Scroll to explore →</p>
+    <div id="cpgOutput" class="cpg-output graph-container">
+      <div class="placeholder-msg">✨ Run the analyzer to see the CPG →</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════ -->
+<footer class="site-footer" aria-label="Legend and project information">
+  <div class="footer-inner">
+    <div class="legend" aria-label="Token type color legend">
+      <span class="legend-title">🎨 Legend:</span>
+      <span class="chip chip-kw">🔑 Keyword</span>
+      <span class="chip chip-id">📝 Identifier</span>
+      <span class="chip chip-op">⚙️ Operator</span>
+      <span class="chip chip-lit">🔢 Literal</span>
+      <span class="chip chip-delim">📐 Delimiter</span>
+      <span class="chip chip-sym">✨ Symbol</span>
+    </div>
+    <div class="footer-credit">🎓 Academic Project · C Program Structural Visualizer · Pure HTML/CSS/JS · Modern Interface</div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+
+<script>
+  // Tab switching functionality
+  function switchTab(tabId, element) {
+    // Remove active class from all tabs and panels
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-selected', 'false');
+    });
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+      panel.classList.remove('active');
+      panel.setAttribute('aria-hidden', 'true');
+    });
+    
+    // Add active class to selected tab and panel
+    element.classList.add('active');
+    element.setAttribute('aria-selected', 'true');
+    const activePanel = document.getElementById(`tab-${tabId}`);
+    activePanel.classList.add('active');
+    activePanel.setAttribute('aria-hidden', 'false');
+  }
+  
+  // Load sample programs
+  function loadSample() {
+    const select = document.getElementById('sampleSelect');
+    const sampleValue = select.value;
+    const codeEditor = document.getElementById('codeInput');
+    
+    const samples = {
+      prog1: `// Simple Arithmetic Program
+#include <stdio.h>
+
+int main() {
+    int a = 10;
+    int b = 20;
+    int sum = a + b;
+    
+    printf("Sum: %d", sum);
+    return 0;
+}`,
+      prog2: `// Conditional Program (if/else)
+#include <stdio.h>
+
+int main() {
+    int num = 15;
+    
+    if (num > 10) {
+        printf("Number is greater than 10");
+    } else {
+        printf("Number is less than or equal to 10");
+    }
+    
+    return 0;
+}`,
+      prog3: `// For Loop Program
+#include <stdio.h>
+
+int main() {
+    int sum = 0;
+    
+    for (int i = 1; i <= 10; i++) {
+        sum = sum + i;
+    }
+    
+    printf("Sum of 1 to 10: %d", sum);
+    return 0;
+}`,
+      prog4: `// Nested Logic Program
+#include <stdio.h>
+
+int main() {
+    int a = 5;
+    int b = 10;
+    int c = 7;
+    
+    if (a > b) {
+        if (a > c) {
+            printf("a is largest");
+        }
+    } else if (b > c) {
+        printf("b is largest");
+    } else {
+        printf("c is largest");
+    }
+    
+    return 0;
+}`
+    };
+    
+    if (samples[sampleValue]) {
+      codeEditor.value = samples[sampleValue];
+      // Trigger auto-resize if needed
+      codeEditor.style.height = 'auto';
+      codeEditor.style.height = codeEditor.scrollHeight + 'px';
+    }
+  }
+  
+  // Clear code editor
+  function clearCode() {
+    const codeEditor = document.getElementById('codeInput');
+    codeEditor.value = '';
+    codeEditor.style.height = 'auto';
+    codeEditor.focus();
+    
+    // Show temporary status
+    const statusMsg = document.getElementById('statusMsg');
+    statusMsg.textContent = '✓ Editor cleared';
+    statusMsg.className = 'status-msg success';
+    setTimeout(() => {
+      statusMsg.className = 'status-msg hidden';
+    }, 2000);
+  }
+  
+  // Analyze code (simulated for demo - replace with actual logic)
+  function analyzeCode() {
+    const codeEditor = document.getElementById('codeInput');
+    const code = codeEditor.value.trim();
+    
+    if (!code) {
+      const statusMsg = document.getElementById('statusMsg');
+      statusMsg.textContent = '⚠️ Please enter or load a C program first';
+      statusMsg.className = 'status-msg error';
+      setTimeout(() => {
+        statusMsg.className = 'status-msg hidden';
+      }, 3000);
+      return;
+    }
+    
+    // Show loading state
+    const statusMsg = document.getElementById('statusMsg');
+    statusMsg.textContent = '🔄 Analyzing program...';
+    statusMsg.className = 'status-msg success';
+    
+    // Simulate analysis delay
+    setTimeout(() => {
+      statusMsg.textContent = '✅ Analysis complete!';
+      setTimeout(() => {
+        statusMsg.className = 'status-msg hidden';
+      }, 2000);
+      
+      // Update placeholder messages with demo content
+      updatePlaceholdersWithDemo();
+    }, 1000);
+  }
+  
+  // Demo function to show analysis results
+  function updatePlaceholdersWithDemo() {
+    const tokenOutput = document.getElementById('tokenOutput');
+    const astOutput = document.getElementById('astOutput');
+    const cfgOutput = document.getElementById('cfgOutput');
+    const dfgOutput = document.getElementById('dfgOutput');
+    const cpgOutput = document.getElementById('cpgOutput');
+    
+    // Demo token table
+    tokenOutput.innerHTML = `
+      <div class="token-table-wrap">
+        <table class="token-table">
+          <thead>
+            <tr><th>#</th><th>Token Value</th><th>Type</th><th>Line</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="t-num">1</td><td class="t-val">int</td><td><span class="token-chip chip-kw">Keyword</span></td><td>3</td></tr>
+            <tr><td class="t-num">2</td><td class="t-val">main</td><td><span class="token-chip chip-id">Identifier</span></td><td>3</td></tr>
+            <tr><td class="t-num">3</td><td class="t-val">(</td><td><span class="token-chip chip-delim">Delimiter</span></td><td>3</td></tr>
+            <tr><td class="t-num">4</td><td class="t-val">)</td><td><span class="token-chip chip-delim">Delimiter</span></td><td>3</td></tr>
+            <tr><td class="t-num">5</td><td class="t-val">{</td><td><span class="token-chip chip-delim">Delimiter</span></td><td>3</td></tr>
+            <tr><td class="t-num">6</td><td class="t-val">int</td><td><span class="token-chip chip-kw">Keyword</span></td><td>4</td></tr>
+            <tr><td class="t-num">7</td><td class="t-val">a</td><td><span class="token-chip chip-id">Identifier</span></td><td>4</td></tr>
+            <tr><td class="t-num">8</td><td class="t-val">=</td><td><span class="token-chip chip-op">Operator</span></td><td>4</td></tr>
+            <tr><td class="t-num">9</td><td class="t-val">10</td><td><span class="token-chip chip-lit">Literal</span></td><td>4</td></tr>
+            <tr><td class="t-num">10</td><td class="t-val">;</td><td><span class="token-chip chip-sym">Symbol</span></td><td>4</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    // Demo AST
+    astOutput.innerHTML = `
+      <div class="ast-tree">
+        <div class="ast-node ast-root">
+          <div class="ast-node-label">
+            <span class="ast-icon">📦</span>
+            <span class="ast-kind nk-program">Program</span>
+          </div>
+          <div class="ast-node">
+            <div class="ast-node-label">
+              <span class="ast-icon">🔧</span>
+              <span class="ast-kind nk-function">Function</span>
+              <span class="ast-val">main</span>
+            </div>
+            <div class="ast-node">
+              <div class="ast-node-label">
+                <span class="ast-icon">📝</span>
+                <span class="ast-kind nk-decl">Declaration</span>
+                <span class="ast-val">int a = 10</span>
+              </div>
+            </div>
+            <div class="ast-node">
+              <div class="ast-node-label">
+                <span class="ast-icon">📝</span>
+                <span class="ast-kind nk-decl">Declaration</span>
+                <span class="ast-val">int b = 20</span>
+              </div>
+            </div>
+            <div class="ast-node">
+              <div class="ast-node-label">
+                <span class="ast-icon">➗</span>
+                <span class="ast-kind nk-assign">Assignment</span>
+                <span class="ast-val">sum = a + b</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Demo CFG
+    cfgOutput.innerHTML = `
+      <div class="flow-svg">
+        <svg width="400" height="300" viewBox="0 0 400 300" style="background: transparent;">
+          <circle cx="200" cy="30" r="20" fill="#4a7c8c" stroke="#2c5a6a" stroke-width="2"/>
+          <text x="200" y="36" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Entry</text>
+          <line x1="200" y1="50" x2="200" y2="80" stroke="#8b6b4a" stroke-width="2" marker-end="url(#arrow)"/>
+          <rect x="150" y="80" width="100" height="40" rx="8" fill="#6ba0b0" stroke="#4a7c8c" stroke-width="2"/>
+          <text x="200" y="105" text-anchor="middle" fill="white" font-size="11">int a = 10</text>
+          <line x1="200" y1="120" x2="200" y2="150" stroke="#8b6b4a" stroke-width="2" marker-end="url(#arrow)"/>
+          <rect x="150" y="150" width="100" height="40" rx="8" fill="#6ba0b0" stroke="#4a7c8c" stroke-width="2"/>
+          <text x="200" y="175" text-anchor="middle" fill="white" font-size="11">int b = 20</text>
+          <line x1="200" y1="190" x2="200" y2="220" stroke="#8b6b4a" stroke-width="2" marker-end="url(#arrow)"/>
+          <circle cx="200" cy="260" r="20" fill="#c47b5a" stroke="#a86442" stroke-width="2"/>
+          <text x="200" y="266" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Exit</text>
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#8b6b4a"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    `;
+    
+    // Demo DFG
+    dfgOutput.innerHTML = `
+      <div class="flow-svg">
+        <svg width="500" height="200" viewBox="0 0 500 200" style="background: transparent;">
+          <rect x="20" y="80" width="80" height="50" rx="6" fill="#7a5a7a" stroke="#5a3a5a" stroke-width="2"/>
+          <text x="60" y="110" text-anchor="middle" fill="white" font-size="11">a = 10</text>
+          <line x1="100" y1="105" x2="180" y2="105" stroke="#b87a3a" stroke-width="2" marker-end="url(#arrowDFG)"/>
+          <rect x="180" y="80" width="80" height="50" rx="6" fill="#7a5a7a" stroke="#5a3a5a" stroke-width="2"/>
+          <text x="220" y="110" text-anchor="middle" fill="white" font-size="11">b = 20</text>
+          <line x1="260" y1="105" x2="340" y2="105" stroke="#b87a3a" stroke-width="2" marker-end="url(#arrowDFG)"/>
+          <rect x="340" y="80" width="80" height="50" rx="6" fill="#7a5a7a" stroke="#5a3a5a" stroke-width="2"/>
+          <text x="380" y="110" text-anchor="middle" fill="white" font-size="11">sum = a+b</text>
+          <line x1="420" y1="105" x2="460" y2="105" stroke="#b87a3a" stroke-width="2" marker-end="url(#arrowDFG)"/>
+          <circle cx="480" cy="105" r="15" fill="#d4a76a" stroke="#b8860b" stroke-width="2"/>
+          <text x="480" y="110" text-anchor="middle" fill="white" font-size="14">✓</text>
+          <defs>
+            <marker id="arrowDFG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#b87a3a"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    `;
+    
+    // Demo CPG
+    cpgOutput.innerHTML = `
+      <div class="cpg-legend">
+        <div class="cpg-leg-item"><div class="cpg-leg-line ast"></div><span>AST Edge</span></div>
+        <div class="cpg-leg-item"><div class="cpg-leg-line cfg"></div><span>CFG Edge</span></div>
+        <div class="cpg-leg-item"><div class="cpg-leg-line dfg"></div><span>DFG Edge</span></div>
+      </div>
+      <div class="flow-svg">
+        <svg width="600" height="300" viewBox="0 0 600 300" style="background: transparent;">
+          <circle cx="100" cy="150" r="25" fill="#6ba0b0" stroke="#4a7c8c" stroke-width="2"/>
+          <text x="100" y="156" text-anchor="middle" fill="white" font-size="10">Decl a</text>
+          <circle cx="250" cy="150" r="25" fill="#6ba0b0" stroke="#4a7c8c" stroke-width="2"/>
+          <text x="250" y="156" text-anchor="middle" fill="white" font-size="10">Decl b</text>
+          <circle cx="400" cy="150" r="25" fill="#6ba0b0" stroke="#4a7c8c" stroke-width="2"/>
+          <text x="400" y="156" text-anchor="middle" fill="white" font-size="10">Assign sum</text>
+          <circle cx="520" cy="150" r="25" fill="#c47b5a" stroke="#a86442" stroke-width="2"/>
+          <text x="520" y="156" text-anchor="middle" fill="white" font-size="10">Return</text>
+          
+          <line x1="125" y1="150" x2="225" y2="150" stroke="#8b6b4a" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrowCPG)"/>
+          <line x1="275" y1="150" x2="375" y2="150" stroke="#8b6b4a" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrowCPG)"/>
+          <line x1="425" y1="150" x2="495" y2="150" stroke="#8b6b4a" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrowCPG)"/>
+          
+          <path d="M100 125 L100 80 L250 80 L250 125" fill="none" stroke="#b87a3a" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowCPG)"/>
+          <path d="M250 125 L250 50 L400 50 L400 125" fill="none" stroke="#b87a3a" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowCPG)"/>
+          
+          <path d="M100 175 L100 220 L400 220 L400 175" fill="none" stroke="#7a5a7a" stroke-width="1.5" marker-end="url(#arrowCPG)"/>
+          
+          <defs>
+            <marker id="arrowCPG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#8b6b4a"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    `;
+    
+    // Update stats
+    const tokenStats = document.getElementById('tokenStats');
+    tokenStats.innerHTML = `
+      <span class="stat-chip"><span>📊</span> Total Tokens: 10</span>
+      <span class="stat-chip"><span>🔑</span> Keywords: 2</span>
+      <span class="stat-chip"><span>📝</span> Identifiers: 3</span>
+      <span class="stat-chip"><span>⚙️</span> Operators: 1</span>
+    `;
+  }
+  
+  // Auto-resize textarea
+  const textarea = document.getElementById('codeInput');
+  if (textarea) {
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
+  }
+</script>
+
+</body>
+</html>
