@@ -1,4 +1,4 @@
-# 🚀 CViz — C Program Structure Visualizer
+# 🚀 CViz — C Program Structure Visualizer 
 
 <div align="center">
 
